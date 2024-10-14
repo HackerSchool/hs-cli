@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"hscli/config"
 	"net/http"
+	"time"
 
 	"go.nhat.io/cookiejar"
 	"golang.org/x/net/publicsuffix"
@@ -20,7 +21,6 @@ type Client struct {
 }
 
 func NewClient() *Client {
-	// TODO http client timeout (it doesn't exist by default)
 	return &Client{
 		Http: &http.Client{
 			CheckRedirect: func(req *http.Request, via []*http.Request) error {
@@ -31,6 +31,7 @@ func NewClient() *Client {
 					r: http.DefaultTransport,
 				},
 			},
+			Timeout: 100 * time.Second, // default, TODO should be passed as CLI arg
 		},
 		Cfg: &config.Config{},
 	}
