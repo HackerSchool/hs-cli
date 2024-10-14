@@ -1,0 +1,9 @@
+.vscode/
+
+hscli
+
+.env
+*.yaml
+*.yml
+*.json
+
