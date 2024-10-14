@@ -21,7 +21,7 @@ type Config struct {
 // Attempts to load config from file and environment if any config parameter is not provided as a CLI argument
 // Reads config from file (which in turn might be overwritten by environment in ReadConfig call)
 // If the file can't be read only loads configuration from environment
-func LoadConfig(cCtx *cli.Context, cfg *Config, cfgPath string) error {
+func LoadConfig(cfg *Config, cfgPath string) error {
 	if cfg.Root != "" && cfg.User != "" && cfg.Password != "" && cfg.CookieJarPath != "" {
 		return nil
 	}

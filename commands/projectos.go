@@ -27,7 +27,6 @@ func GetProjectByID(c *client.Client, args ...string) ([]byte, error) {
 	if len(args) == 0 {
 		return nil, fmt.Errorf("missing arguments to command call, expected at least 1 got 0")
 	}
-	fmt.Println(c.Cfg.Root + "/projects/" + args[0])
 	rsp, err := c.Http.Get(c.Cfg.Root + "/projects/" + args[0])
 	if err != nil {
 		return nil, fmt.Errorf("failed making request: %w", err)

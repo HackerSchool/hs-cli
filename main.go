@@ -13,6 +13,8 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
+const EX_USAGE = 64 // https://stackoverflow.com/questions/1101957/are-there-any-standard-exit-status-codes-in-linux
+
 func main() {
 	c := client.NewClient()
 	app := &cli.App{
@@ -25,7 +27,7 @@ func main() {
 			if cCtx.Bool("debug") {
 				slog.SetLogLoggerLevel(slog.LevelDebug)
 			}
-			if err := config.LoadConfig(cCtx, c.Cfg, cCtx.String("config")); err != nil {
+			if err := config.LoadConfig(c.Cfg, cCtx.String("config")); err != nil {
 				return err
 			}
 			c.SetupJar()
@@ -85,9 +87,15 @@ func main() {
 				Usage:     "retrieve all members",
 				UsageText: "mgetall [command options]",
 				Action: func(cCtx *cli.Context) error {
-					return commands.RunCommand(c,
+					r, err := commands.RunCommand(c,
 						commands.WithLoginRetry(
 							commands.GetMembers))
+					if err != nil {
+						logging.LogDebug("%s", err)
+						return cli.Exit("Failed retrieving members", 1)
+					}
+					fmt.Fprintf(cCtx.App.Writer, "%s", string(r))
+					return nil
 				},
 			},
 			{
@@ -96,12 +104,17 @@ func main() {
 				UsageText: "mget [command options] <username>",
 				Action: func(cCtx *cli.Context) error {
 					if cCtx.Args().Len() == 0 {
-						fmt.Println("Missing argument <username>")
-						return nil
+						return cli.Exit("Missing argument <username>", EX_USAGE)
 					}
-					return commands.RunCommand(c,
+					r, err := commands.RunCommand(c,
 						commands.WithLoginRetry(
 							commands.GetMemberByUsername), cCtx.Args().First())
+					if err != nil {
+						logging.LogDebug("%s", err)
+						return cli.Exit(fmt.Sprintf("Failed retrieving member %s", cCtx.Args().First()), 1)
+					}
+					fmt.Fprintf(cCtx.App.Writer, "%s", string(r))
+					return nil
 				},
 			},
 			{
@@ -110,12 +123,17 @@ func main() {
 				UsageText: "mcreate [commands options] <file>",
 				Action: func(cCtx *cli.Context) error {
 					if cCtx.Args().Len() == 0 {
-						fmt.Println("Missing argument <file>")
-						return nil
+						return cli.Exit("Missing argument <file>", EX_USAGE)
 					}
-					return commands.RunCommand(c,
+					r, err := commands.RunCommand(c,
 						commands.WithLoginRetry(
 							commands.CreateMember), cCtx.Args().First())
+					if err != nil {
+						logging.LogDebug("%s", err)
+						return cli.Exit("Failed retrieving members", 0)
+					}
+					fmt.Fprintf(cCtx.App.Writer, "%s", string(r))
+					return nil
 				},
 			},
 			{
@@ -135,9 +153,15 @@ func main() {
 				Usage:     "retrieve all projects",
 				UsageText: "pgetall [command options]",
 				Action: func(cCtx *cli.Context) error {
-					return commands.RunCommand(c,
+					r, err := commands.RunCommand(c,
 						commands.WithLoginRetry(
 							commands.GetProjects))
+					if err != nil {
+						logging.LogDebug("%s", err)
+						return cli.Exit("Failed retrieving projects", 1)
+					}
+					fmt.Fprintf(cCtx.App.Writer, string(r))
+					return nil
 				},
 			},
 			{
@@ -146,12 +170,17 @@ func main() {
 				UsageText: "pget [command options] <id>",
 				Action: func(cCtx *cli.Context) error {
 					if cCtx.Args().Len() == 0 {
-						fmt.Println("Missing argument <id>")
-						return nil
+						return cli.Exit("Missing argument <id>", EX_USAGE)
 					}
-					return commands.RunCommand(c,
+					r, err := commands.RunCommand(c,
 						commands.WithLoginRetry(
 							commands.GetProjectByID), cCtx.Args().First())
+					if err != nil {
+						logging.LogDebug("%s", err)
+						return cli.Exit(fmt.Sprintf("Failed retrieving project %s information", cCtx.Args().First()), 1)
+					}
+					fmt.Fprintf(cCtx.App.Writer, string(r))
+					return nil
 				},
 			},
 			{
@@ -172,10 +201,9 @@ func main() {
 				Action: func(cCtx *cli.Context) error {
 					if err := c.Login(); err != nil {
 						logging.LogDebug("%s", err)
-						fmt.Println("Couldn't log in! Turn debug for more information")
-						return nil
+						return cli.Exit("Couldn't log in! Turn debug for more information!", 1)
 					}
-					fmt.Println("Logged in sucessfully!")
+					fmt.Fprintf(cCtx.App.Writer, "Logged in successfully!")
 					return nil
 				},
 			},

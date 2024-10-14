@@ -25,14 +25,8 @@ func WithLoginRetry(cmd Command) Command {
 	}
 }
 
-func RunCommand(c *client.Client, cmd Command, args ...string) error {
-	r, err := cmd(c, args...)
-	if err != nil {
-		return err
-	}
-	// FIXME redo presentation logic
-	fmt.Println(string(r))
-	return nil
+func RunCommand(c *client.Client, cmd Command, args ...string) ([]byte, error) {
+	return cmd(c, args...)
 }
 
 // Example new command definition (can be anywhere in this package)
