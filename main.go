@@ -92,7 +92,7 @@ func main() {
 				UsageText: "mget [command options] <username>",
 				Action: func(cCtx *cli.Context) error {
 					if cCtx.Args().Len() == 0 {
-						fmt.Fprintf(os.Stderr, "Missing <username> argument", EX_USAGE)
+						fmt.Fprintf(os.Stderr, "Missing <username> argument")
 						os.Exit(EX_USAGE)
 					}
 					os.Exit(commands.RunCommand(c,
@@ -156,7 +156,8 @@ func main() {
 				UsageText: "pget [command options] <id>",
 				Action: func(cCtx *cli.Context) error {
 					if cCtx.Args().Len() == 0 {
-						return cli.Exit("Missing argument <id>", EX_USAGE)
+						fmt.Fprintf(os.Stderr, "Missing <id> argument")
+						os.Exit(EX_USAGE)
 					}
 					os.Exit(commands.RunCommand(c,
 						commands.WithLoginRetry(
