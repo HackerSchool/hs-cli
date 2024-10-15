@@ -72,7 +72,7 @@ source .env; hscli -d login
 The `source` command only needs to be ran once per shell session.
 
 # Development
-Commands are expected to be ran a certain way to keep structure somewhat coherent.
+Commands are expected to be ran a certain way to keep the structure somewhat coherent.
 To build new commands start by adding a new `Command` entry into the `urfave/cli/v2` object in `main.go`:
 ```go
 {
@@ -93,21 +93,20 @@ Now, in the `commands` package feel free to define this function anywhere you'd 
 ```go
 func YourCommandHandlerFuncHere(c *client.Client, args ...string) ([]byte, error) {
     // You can validate arguments here
-    if len(args) != 1 || !strings.HasPrefix(args[0], "https://") {
-        return nil, NewCommandError("Invalid URL!", nil)
+    if len(args) != 1 || !strings.HasPrefix(args[0], "goathackerschool") {
+        return nil, NewCommandError("Invalid argument", nil)
     }
 
     // Do your command logic here
     rsp, err := c.Http.Get(c.Cfg.Root + "/mycommandendpoint")
     if err != nil {
+        // Returning a non domain error
         return nil, NewCommandError("Failed requesting server", fmt.Errorf("http.Get %s: %w", "mycommandendpoint"; err)
     }
 
-    // Here you can validate if any business logic error might have occured, for example you might
-    // want to print something special for some HTTP codes, 404, 401, etc. 
-
-    // Here you can return a generic domain error whose result will be printed to the user (considering the 
-    // response JSON data is in the rspJson variable)
+    // Here you can validate if any business logic / domain error might have occured, for example you might
+    // want to do something or print something specific for some HTTP codes (404, 401, etc.) 
+    // In this case we just return a generic domain error
     if rsp.StatusCode != http.StatusOK {
         return nil, NewCommandError(fmt.Sprintf("%d %s\n%s", rsp.StatusCode, http.StatusText(rsp.StatusCode), string(rspJson)), nil)
     }
