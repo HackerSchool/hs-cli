@@ -3,6 +3,7 @@ package client
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"hscli/config"
 	"net/http"
@@ -12,8 +13,12 @@ import (
 	"golang.org/x/net/publicsuffix"
 )
 
-var ProgramName = "hs-cli"
-var ProgramVersion = "0.0.1"
+const (
+	ProgramName    = "hs-cli"
+	ProgramVersion = "0.0.1"
+)
+
+var ErrUnauthorized = errors.New("Unauthorized!")
 
 type Client struct {
 	Http *http.Client
@@ -53,21 +58,25 @@ func (c *Client) Login() error {
 	}
 	payloadJson, err := json.Marshal(payload)
 	if err != nil {
-		return fmt.Errorf("failed encoding payload: %w", err)
+		return fmt.Errorf("json.Marshal: %w", err)
 	}
-	req, err := http.NewRequest("POST", c.Cfg.Root+"/login", bytes.NewReader(payloadJson))
+	var endpoint string = c.Cfg.Root + "/login"
+	req, err := http.NewRequest("POST", endpoint, bytes.NewReader(payloadJson))
 	if err != nil {
-		return fmt.Errorf("failed creating POST request: %w", err)
+		return fmt.Errorf("http.NewRequest POST %s: %w", endpoint, err)
 	}
 	req.Header.Set("Content-Type", "application/json")
 
 	rsp, err := c.Http.Do(req)
 	if err != nil {
-		return fmt.Errorf("failed making POST request: %w", err)
+		return fmt.Errorf("http.Do: %w", err)
 	}
 	rsp.Body.Close() // nothing relevant here
-	if rsp.StatusCode != 200 {
-		return fmt.Errorf("response with non 200 code %d", rsp.StatusCode)
+	if rsp.StatusCode == http.StatusUnauthorized {
+		return ErrUnauthorized
+	}
+	if rsp.StatusCode != http.StatusOK {
+		return fmt.Errorf("%d %s", rsp.StatusCode, http.StatusText(rsp.StatusCode))
 	}
 	return nil
 }

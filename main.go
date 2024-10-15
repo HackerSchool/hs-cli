@@ -5,7 +5,6 @@ import (
 	"hscli/client"
 	"hscli/commands"
 	"hscli/config"
-	"hscli/logging"
 	"log"
 	"log/slog"
 	"os"
@@ -75,26 +74,15 @@ func main() {
 				Usage:   "log debug information to the console",
 			},
 		},
-		Action: func(cCtx *cli.Context) error {
-			if cCtx.Args().Len() == 0 {
-				return cli.ShowAppHelp(cCtx)
-			}
-			return nil
-		},
 		Commands: []*cli.Command{
 			{
 				Name:      "mgetall",
 				Usage:     "retrieve all members",
 				UsageText: "mgetall [command options]",
 				Action: func(cCtx *cli.Context) error {
-					r, err := commands.RunCommand(c,
+					os.Exit(commands.RunCommand(c,
 						commands.WithLoginRetry(
-							commands.GetMembers))
-					if err != nil {
-						logging.LogDebug("%s", err)
-						return cli.Exit("Failed retrieving members", 1)
-					}
-					fmt.Fprintf(cCtx.App.Writer, "%s", string(r))
+							commands.GetMembers)))
 					return nil
 				},
 			},
@@ -104,16 +92,12 @@ func main() {
 				UsageText: "mget [command options] <username>",
 				Action: func(cCtx *cli.Context) error {
 					if cCtx.Args().Len() == 0 {
-						return cli.Exit("Missing argument <username>", EX_USAGE)
+						fmt.Fprintf(os.Stderr, "Missing <username> argument", EX_USAGE)
+						os.Exit(EX_USAGE)
 					}
-					r, err := commands.RunCommand(c,
+					os.Exit(commands.RunCommand(c,
 						commands.WithLoginRetry(
-							commands.GetMemberByUsername), cCtx.Args().First())
-					if err != nil {
-						logging.LogDebug("%s", err)
-						return cli.Exit(fmt.Sprintf("Failed retrieving member %s", cCtx.Args().First()), 1)
-					}
-					fmt.Fprintf(cCtx.App.Writer, "%s", string(r))
+							commands.GetMemberByUsername), cCtx.Args().First()))
 					return nil
 				},
 			},
@@ -123,22 +107,29 @@ func main() {
 				UsageText: "mcreate [commands options] <file>",
 				Action: func(cCtx *cli.Context) error {
 					if cCtx.Args().Len() == 0 {
-						return cli.Exit("Missing argument <file>", EX_USAGE)
+						fmt.Fprintf(os.Stderr, "Missing <file> argument")
+						os.Exit(EX_USAGE)
 					}
-					r, err := commands.RunCommand(c,
+					os.Exit(commands.RunCommand(c,
 						commands.WithLoginRetry(
-							commands.CreateMember), cCtx.Args().First())
-					if err != nil {
-						logging.LogDebug("%s", err)
-						return cli.Exit("Failed retrieving members", 0)
-					}
-					fmt.Fprintf(cCtx.App.Writer, "%s", string(r))
+							commands.CreateMember), cCtx.Args().First()))
 					return nil
 				},
 			},
 			{
-				Name:  "mupdate",
-				Usage: "update member information",
+				Name:      "mupdate",
+				Usage:     "update member information",
+				UsageText: "mupdate [command options] <username> <file>",
+				Action: func(cCtx *cli.Context) error {
+					if cCtx.Args().Len() != 2 {
+						fmt.Fprintf(os.Stderr, "Missing arguments")
+						os.Exit(EX_USAGE)
+					}
+					os.Exit(commands.RunCommand(c,
+						commands.WithLoginRetry(
+							commands.UpdateMember), cCtx.Args().Get(0), cCtx.Args().Get(1)))
+					return nil
+				},
 			},
 			{
 				Name:  "mremove",
@@ -153,14 +144,9 @@ func main() {
 				Usage:     "retrieve all projects",
 				UsageText: "pgetall [command options]",
 				Action: func(cCtx *cli.Context) error {
-					r, err := commands.RunCommand(c,
+					os.Exit(commands.RunCommand(c,
 						commands.WithLoginRetry(
-							commands.GetProjects))
-					if err != nil {
-						logging.LogDebug("%s", err)
-						return cli.Exit("Failed retrieving projects", 1)
-					}
-					fmt.Fprintf(cCtx.App.Writer, string(r))
+							commands.GetProjects)))
 					return nil
 				},
 			},
@@ -172,14 +158,9 @@ func main() {
 					if cCtx.Args().Len() == 0 {
 						return cli.Exit("Missing argument <id>", EX_USAGE)
 					}
-					r, err := commands.RunCommand(c,
+					os.Exit(commands.RunCommand(c,
 						commands.WithLoginRetry(
-							commands.GetProjectByID), cCtx.Args().First())
-					if err != nil {
-						logging.LogDebug("%s", err)
-						return cli.Exit(fmt.Sprintf("Failed retrieving project %s information", cCtx.Args().First()), 1)
-					}
-					fmt.Fprintf(cCtx.App.Writer, string(r))
+							commands.GetProjectByID), cCtx.Args().First()))
 					return nil
 				},
 			},
@@ -199,11 +180,21 @@ func main() {
 				Name:  "login",
 				Usage: "login to the API, saving the cookie to the cookiejar",
 				Action: func(cCtx *cli.Context) error {
-					if err := c.Login(); err != nil {
-						logging.LogDebug("%s", err)
-						return cli.Exit("Couldn't log in! Turn debug for more information!", 1)
-					}
-					fmt.Fprintf(cCtx.App.Writer, "Logged in successfully!")
+					// Here we are simply making use of the way this "framework" is setup,
+					// instead of writting a new command (which would just result in code duplication)
+					// we simply pass it a fake command which returns Unauthorized at first and forces the
+					// decorator to attempt a login, if it can do it, then we just return successful
+					var retried bool = false
+					os.Exit(commands.RunCommand(c, commands.WithLoginRetry(
+						func(c *client.Client, args ...string) ([]byte, error) {
+							if !retried {
+								retried = true
+								return nil, client.ErrUnauthorized
+							} else {
+								return []byte("Logged in successfully!"), nil
+							}
+						},
+					)))
 					return nil
 				},
 			},

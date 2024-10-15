@@ -8,39 +8,48 @@ import (
 )
 
 func GetProjects(c *client.Client, args ...string) ([]byte, error) {
-	rsp, err := c.Http.Get(c.Cfg.Root + "/projects")
+	var endpoint string = c.Cfg.Root + "/projects"
+	rsp, err := c.Http.Get(endpoint)
 	if err != nil {
-		return nil, fmt.Errorf("failed making request: %w", err)
+		return nil, NewCommandError("Failed requesting server", fmt.Errorf("http.Get %s: %w", endpoint, err))
 	}
 	defer rsp.Body.Close()
 	if rsp.StatusCode == http.StatusUnauthorized {
-		return nil, ErrUnauthorized
+		return nil, client.ErrUnauthorized
+	}
+	if rsp.StatusCode != http.StatusOK {
+		return nil, NewCommandError(fmt.Sprintf("%d %s", rsp.StatusCode, http.StatusText(rsp.StatusCode)), nil)
 	}
 	rspData, err := io.ReadAll(rsp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("failed reading response: %w", err)
+		return nil, NewCommandError("Failed receiving server response", fmt.Errorf("io.ReadAll: %w", err))
 	}
 	return rspData, nil
 }
 
 func GetProjectByID(c *client.Client, args ...string) ([]byte, error) {
 	if len(args) == 0 {
-		return nil, fmt.Errorf("missing arguments to command call, expected at least 1 got 0")
+		return nil, NewCommandError("Missing argument to command, expect 1 got 0", nil)
 	}
-	rsp, err := c.Http.Get(c.Cfg.Root + "/projects/" + args[0])
+
+	var endpoint string = c.Cfg.Root + "/projects/" + args[0]
+	rsp, err := c.Http.Get(endpoint)
 	if err != nil {
-		return nil, fmt.Errorf("failed making request: %w", err)
+		return nil, NewCommandError("Failed requesting server", fmt.Errorf("http.Get %s: %w", endpoint, err))
 	}
 	defer rsp.Body.Close()
 	if rsp.StatusCode == http.StatusUnauthorized {
-		return nil, ErrUnauthorized
+		return nil, client.ErrUnauthorized
 	}
 	if rsp.StatusCode == http.StatusNotFound {
-		return nil, fmt.Errorf("Project with provided ID does not exist!")
+		return nil, NewCommandError("Member with provided ID does not exist", nil)
+	}
+	if rsp.StatusCode != http.StatusOK {
+		return nil, NewCommandError(fmt.Sprintf("%d %s", rsp.StatusCode, http.StatusText(rsp.StatusCode)), nil)
 	}
 	rspData, err := io.ReadAll(rsp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("failed reading response: %w", err)
+		return nil, NewCommandError("Failed receiving server response", fmt.Errorf("io.ReadAll: %w", err))
 	}
 	return rspData, nil
 }
