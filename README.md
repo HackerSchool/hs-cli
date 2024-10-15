@@ -101,7 +101,7 @@ func YourCommandHandlerFuncHere(c *client.Client, args ...string) ([]byte, error
     rsp, err := c.Http.Get(c.Cfg.Root + "/mycommandendpoint")
     if err != nil {
         // Returning a non domain error
-        return nil, NewCommandError("Failed requesting server", fmt.Errorf("http.Get %s: %w", "mycommandendpoint", err)
+        return nil, NewCommandError("Failed requesting server", fmt.Errorf("http.Get %s: %w", "mycommandendpoint", err))
     }
 
     // Here you can validate if any business logic / domain error might have occured, for example you might
