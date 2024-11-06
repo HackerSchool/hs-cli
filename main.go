@@ -383,7 +383,7 @@ func main() {
 			},
 			{
 				Name:  "logout",
-				Usage: "logoout off the API, clearing the session",
+				Usage: "logout off the API, clearing the session",
 				Action: func(cCtx *cli.Context) error {
 					os.Exit(commands.RunCommand(c,
 						func(c *client.Client, args ...string) ([]byte, error) {
