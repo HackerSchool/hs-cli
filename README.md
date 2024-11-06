@@ -2,29 +2,38 @@
 # Usage
 ```
 NAME:
-   hs-cli - CLI client for the HackerSchool API
+   hscli - CLI client for the HackerSchool API
 
 USAGE:
-   hs-cli [global options] command [command options]
+   hscli [global options] command [command options]
 
 VERSION:
    0.0.1
 
 COMMANDS:
-   mgetall    retrieve all members
-   mget       retrieve information of a member
-   mcreate    create member providing path to a json file
-   mupdate    update member information
-   mremove    remove member from the database
-   mprojects  get the projects a member is in
-   pgetall    retrieve all projects
-   pget       retrieve information of a project
-   pcreate    create a new project
-   pupdate    update information of a project
-   pdelete    delete project from the database
-   pmembers   get members in a project
-   login      login to the API, saving the cookie to the cookiejar
-   help, h    Shows a list of commands or help for one command
+   mgetall      retrieve all members
+   mget         retrieve information of a member
+   mcreate      create member
+   mupdate      update member information
+   mdelete      delete member from the database
+   mprojects    get the projects a member is in
+   mlogo        get member logo
+   mtags        get member tags
+   maddproject  add a project to a member
+   maddlogo     upload member logo
+   maddtag      add member tag
+   mdeltag      delete member tag
+   pgetall      retrieve all projects
+   pget         retrieve information of a project
+   pcreate      create a new project
+   pupdate      update information of a project
+   pdelete      delete project from the database
+   pmembers     get members in a project
+   plogo        get project logo
+   paddmember   add member to a project
+   login        login to the API, saving the cookie to the cookiejar
+   logout       logoout off the API, clearing the session
+   help, h      Shows a list of commands or help for one command
 
 GLOBAL OPTIONS:
    --config value, -f value      path to config file
@@ -36,8 +45,9 @@ GLOBAL OPTIONS:
    --help, -h                    show help
    --version, -v                 print the version
 ```
+
 # Configuration
-If configuration values are not provided as CLI options the program will first attempt to load them from the `--config` option and, after that, look for the environment variables and overwrite any options set by the configuration file. This way the order of preference is CLI args < environment variables < config file.
+If configuration values are not provided as CLI arguments the program will first attempt to load them from the `--config` option and, after that, look for the environment variables and overwrite any options set by the configuration file. This way the order of preference is CLI args > environment > configuration file.
 
 Example `config.yaml` file:
 ```yml
@@ -55,7 +65,7 @@ export HS_HS_COOKIERJAR="/home/my/cookiejar.json"
 ```
 
 # Examples
-
+## Configuration
 Example using CLI options:
 ```sh
 hscli -r https://api.hackerschool.dev -u username -p password -c cookiejar.json -d login 
@@ -71,59 +81,42 @@ source .env; hscli -d login
 ```
 The `source` command only needs to be ran once per shell session.
 
-# Development
-Commands are expected to be ran a certain way to keep the structure somewhat coherent.
-To build new commands start by adding a new `Command` entry into the `urfave/cli/v2` object in `main.go`:
-```go
-{
-    Name:      "newcommand",
-    Usage:     "message displayed in -h flag of main program",
-    UsageText: "message displayed in -h flag of command",
-    Action: func(cCtx *cli.Context) error {
-        if cCtx.Args().Len() == 0 {
-            fmt.Fprintf(os.Stderr, "Missing <mandatory argument> argument\n")
-            os.Exit(EX_USAGE) // exit code to specify CLI misusage 
-        }
-        os.Exit(commands.RunCommand(c, YourCommandHandlerFuncHere, cCtx.Args()...))
-        return nil
-    },
-},
+## Command Arguments 
+For commands that expect a payload, such as `mcreate`, the `[<file>]` argument is optional, if ommited, the program will attempt to read the payload from standard input. This allows for some flexibility, e.g, the two following examples accomplish the same:
+```sh
+hscli mcreate member.json 
 ```
-Now, in the `commands` package feel free to define this function anywhere you'd like, new files might be created if appropriate.
-```go
-func YourCommandHandlerFuncHere(c *client.Client, args ...string) ([]byte, error) {
-    // You can validate arguments here
-    if len(args) != 1 || !strings.HasPrefix(args[0], "goathackerschool") {
-        return nil, NewCommandError("Invalid argument", nil)
-    }
-
-    // Do your command logic here
-    rsp, err := c.Http.Get(c.Cfg.Root + "/mycommandendpoint")
-    if err != nil {
-        // Returning a non domain error
-        return nil, NewCommandError("Failed requesting server", fmt.Errorf("http.Get %s: %w", "mycommandendpoint", err))
-    }
-
-    // Here you can validate if any business logic / domain error might have occured, for example you might
-    // want to do something or print something specific for some HTTP codes (404, 401, etc.) 
-    // In this case we just return a generic domain error
-    if rsp.StatusCode != http.StatusOK {
-        return nil, NewCommandError(fmt.Sprintf("%d %s\n%s", rsp.StatusCode, http.StatusText(rsp.StatusCode), string(rspJson)), nil)
-    }
-
-    // Return the raw JSON response from the server
-    return rspData, nil
-}
+```sh
+cat member.json | hscli mcreate
 ```
 
-The `CommandError` has two usecases. 
+## Exit Codes 
+The program returns `1` for API errors and `2` for other errors, e.g, "no connection to host", etc.
+This can be leveraged for scripting.
+```bash
+hscli -d mget username > /dev/null
+if [ $? -eq 0 ]; then
+    hscli -d mgetlogo username > logos/username.png
+    echo "Logo saved sufessfully!"
+elif [ $? -eq 1 ]; then
+    echo "API Error!"
+else
+    echo "Error!"
+fi
+```
+This sript will save the logo of a user if it exists.
 
-One is to report generic errors not really related to the API domain, for example, lost connection, invalid URL provided by the user, etc. To report these errors just return a new instance with a descriptive message for the user and an error that wraps the original error, the "stack trace" will be printed if running in debug.
-
-For errors related to business logic, for example, such as a user not being authenticated or a resource not existing, which don't have an underlying error caused at runtime, just create the `CommandErrror` with a `nil` cause parameter and the desired message to be displayed.
-
-# TODO
-- [ ] add usage documentation (similar to `-h` usage string but with examples)
-- [ ] missing commands: `pcreate`, `pupdate`, `pdelete`
-- [ ] development documentation (`command.go` has a comment with new command definition examples)
-- [ ] define output format  (only printing json strings as of know)
+## Output 
+The program writes raw JSON to `stdout` and error and log messages to `stderr`. Because of this it's recommended to make use of other programs such as `jq`.
+```sh
+hscli mgetall | jq
+```
+```sh
+hscli maddtag dev_tag.json | jq
+```
+```sh
+hscli pmembers proj_name | jq
+```
+```sh
+cat updated_project.json | hscli update proj_name | jq
+```
