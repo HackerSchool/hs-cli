@@ -99,7 +99,7 @@ func main() {
 					}
 					os.Exit(commands.RunCommand(c,
 						commands.WithLoginRetry(
-							commands.GetMemberByUsername), cCtx.Args().First()))
+							commands.GetMemberByUsername), cCtx.Args().Slice()...))
 					return nil
 				},
 			},
@@ -111,7 +111,7 @@ func main() {
 					os.Exit(commands.RunCommand(c,
 						commands.WithLoginRetry(
 							commands.DefaultLastArgumentToStdin(
-								commands.CreateMember)), cCtx.Args().First()))
+								commands.CreateMember)), cCtx.Args().Slice()...))
 					return nil
 				},
 			},
@@ -142,7 +142,7 @@ func main() {
 					}
 					os.Exit(commands.RunCommand(c,
 						commands.WithLoginRetry(
-							commands.DeleteMember), cCtx.Args().First()))
+							commands.DeleteMember), cCtx.Args().Slice()...))
 					return nil
 				},
 			},
@@ -157,7 +157,7 @@ func main() {
 					}
 					os.Exit(commands.RunCommand(c,
 						commands.WithLoginRetry(
-							commands.GetMemberProjects), cCtx.Args().First()))
+							commands.GetMemberProjects), cCtx.Args().Slice()...))
 					return nil
 				},
 			},
@@ -172,7 +172,7 @@ func main() {
 					}
 					os.Exit(commands.RunCommand(c,
 						commands.WithLoginRetry(
-							commands.GetMemberLogo), cCtx.Args().First()))
+							commands.GetMemberLogo), cCtx.Args().Slice()...))
 					return nil
 				},
 			},
@@ -187,7 +187,7 @@ func main() {
 					}
 					os.Exit(commands.RunCommand(c,
 						commands.WithLoginRetry(
-							commands.GetTags), cCtx.Args().First()))
+							commands.GetTags), cCtx.Args().Slice()...))
 					return nil
 				},
 			},
@@ -277,7 +277,7 @@ func main() {
 					}
 					os.Exit(commands.RunCommand(c,
 						commands.WithLoginRetry(
-							commands.GetProjectByID), cCtx.Args().First()))
+							commands.GetProjectByID), cCtx.Args().Slice()...))
 					return nil
 				},
 			},
@@ -320,7 +320,7 @@ func main() {
 					}
 					os.Exit(commands.RunCommand(c,
 						commands.WithLoginRetry(
-							commands.DeleteProject), cCtx.Args().First()))
+							commands.DeleteProject), cCtx.Args().Slice()...))
 					return nil
 				},
 			},
@@ -335,7 +335,7 @@ func main() {
 					}
 					os.Exit(commands.RunCommand(c,
 						commands.WithLoginRetry(
-							commands.GetProjectMembers), cCtx.Args().First()))
+							commands.GetProjectMembers), cCtx.Args().Slice()...))
 					return nil
 				},
 			},
@@ -350,7 +350,7 @@ func main() {
 					}
 					os.Exit(commands.RunCommand(c,
 						commands.WithLoginRetry(
-							commands.GetProjectLogo), cCtx.Args().First()))
+							commands.GetProjectLogo), cCtx.Args().Slice()...))
 					return nil
 				},
 			},
@@ -365,7 +365,7 @@ func main() {
 					}
 					os.Exit(commands.RunCommand(c,
 						commands.WithLoginRetry(
-							commands.GetProjectMembers), cCtx.Args().First()))
+							commands.GetProjectMembers), cCtx.Args().Slice()...))
 					return nil
 				},
 			},

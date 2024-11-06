@@ -62,8 +62,7 @@ func DefaultLastArgumentToStdin(cmd Command) Command {
 
 		// if last argument is not an existing file default to stdin
 		lastArg := args[len(args)-1]
-		if _, err := os.Stat(lastArg); os.IsNotExist(err) {
-			args = args[:len(args)-1]
+		if _, err := os.Stat(lastArg); err != nil {
 			args = append(args, "/dev/stdin")
 			return cmd(c, args...)
 		}
