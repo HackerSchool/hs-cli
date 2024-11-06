@@ -1,10 +1,7 @@
 package client
 
 import (
-	"bytes"
-	"encoding/json"
 	"errors"
-	"fmt"
 	"hscli/config"
 	"net/http"
 	"time"
@@ -48,35 +45,4 @@ func (c *Client) SetupJar() {
 		cookiejar.WithAutoSync(true),
 		cookiejar.WithPublicSuffixList(publicsuffix.List),
 	)
-}
-
-// Logs in to the API saving the session cookie in the Jar
-func (c *Client) Login() error {
-	payload := map[string]string{
-		"username": c.Cfg.User,
-		"password": c.Cfg.Password,
-	}
-	payloadJson, err := json.Marshal(payload)
-	if err != nil {
-		return fmt.Errorf("json.Marshal: %w", err)
-	}
-	var endpoint string = c.Cfg.Root + "/login"
-	req, err := http.NewRequest("POST", endpoint, bytes.NewReader(payloadJson))
-	if err != nil {
-		return fmt.Errorf("http.NewRequest POST %s: %w", endpoint, err)
-	}
-	req.Header.Set("Content-Type", "application/json")
-
-	rsp, err := c.Http.Do(req)
-	if err != nil {
-		return fmt.Errorf("http.Do: %w", err)
-	}
-	rsp.Body.Close() // nothing relevant here
-	if rsp.StatusCode == http.StatusUnauthorized {
-		return ErrUnauthorized
-	}
-	if rsp.StatusCode != http.StatusOK {
-		return fmt.Errorf("%d %s", rsp.StatusCode, http.StatusText(rsp.StatusCode))
-	}
-	return nil
 }

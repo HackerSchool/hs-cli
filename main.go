@@ -5,8 +5,10 @@ import (
 	"hscli/client"
 	"hscli/commands"
 	"hscli/config"
+	"io"
 	"log"
 	"log/slog"
+	"net/http"
 	"os"
 
 	"github.com/urfave/cli/v2"
@@ -103,46 +105,44 @@ func main() {
 			},
 			{
 				Name:      "mcreate",
-				Usage:     "create member providing path to a json file",
-				UsageText: "mcreate [commands options] <file>",
+				Usage:     "create member",
+				UsageText: "mcreate [commands options] [<file>]",
 				Action: func(cCtx *cli.Context) error {
-					if cCtx.Args().Len() == 0 {
-						fmt.Fprintf(os.Stderr, "Missing <file> argument\n")
-						os.Exit(EX_USAGE)
-					}
 					os.Exit(commands.RunCommand(c,
 						commands.WithLoginRetry(
-							commands.CreateMember), cCtx.Args().First()))
+							commands.DefaultLastArgumentToStdin(
+								commands.CreateMember)), cCtx.Args().First()))
 					return nil
 				},
 			},
 			{
 				Name:      "mupdate",
 				Usage:     "update member information",
-				UsageText: "mupdate [command options] <username> <file>",
+				UsageText: "mupdate [command options] <username> [<file>]",
 				Action: func(cCtx *cli.Context) error {
-					if cCtx.Args().Len() != 2 {
+					if cCtx.Args().Len() < 1 {
 						fmt.Fprintf(os.Stderr, "Missing arguments\n")
 						os.Exit(EX_USAGE)
 					}
 					os.Exit(commands.RunCommand(c,
 						commands.WithLoginRetry(
-							commands.UpdateMember), cCtx.Args().Get(0), cCtx.Args().Get(1)))
+							commands.DefaultLastArgumentToStdin(
+								commands.UpdateMember)), cCtx.Args().Slice()...))
 					return nil
 				},
 			},
 			{
-				Name:      "mremove",
-				Usage:     "remove member from the database",
-				UsageText: "mremove [command options] <username>",
+				Name:      "mdelete",
+				Usage:     "delete member from the database",
+				UsageText: "mdelete [command options] <username>",
 				Action: func(cCtx *cli.Context) error {
-					if cCtx.Args().Len() == 0 {
+					if cCtx.Args().Len() < 1 {
 						fmt.Fprintf(os.Stderr, "Missing <username> argument\n")
 						os.Exit(EX_USAGE)
 					}
 					os.Exit(commands.RunCommand(c,
 						commands.WithLoginRetry(
-							commands.RemoveMember), cCtx.Args().First()))
+							commands.DeleteMember), cCtx.Args().First()))
 					return nil
 				},
 			},
@@ -151,13 +151,107 @@ func main() {
 				Usage:     "get the projects a member is in",
 				UsageText: "mprojects [command options] <username>",
 				Action: func(cCtx *cli.Context) error {
-					if cCtx.Args().Len() == 0 {
+					if cCtx.Args().Len() < 1 {
 						fmt.Fprintf(os.Stderr, "Missing <username> argument\n")
 						os.Exit(EX_USAGE)
 					}
 					os.Exit(commands.RunCommand(c,
 						commands.WithLoginRetry(
 							commands.GetMemberProjects), cCtx.Args().First()))
+					return nil
+				},
+			},
+			{
+				Name:      "mlogo",
+				Usage:     "get member logo",
+				UsageText: "mgetlogo [command options] <username>",
+				Action: func(cCtx *cli.Context) error {
+					if cCtx.Args().Len() < 1 {
+						fmt.Fprintf(os.Stderr, "Missing <username> argument\n")
+						os.Exit(EX_USAGE)
+					}
+					os.Exit(commands.RunCommand(c,
+						commands.WithLoginRetry(
+							commands.GetMemberLogo), cCtx.Args().First()))
+					return nil
+				},
+			},
+			{
+				Name:      "mtags",
+				Usage:     "get member tags",
+				UsageText: "mgetlogo [command options] <username>",
+				Action: func(cCtx *cli.Context) error {
+					if cCtx.Args().Len() == 0 {
+						fmt.Fprintf(os.Stderr, "Missing <username> argument\n")
+						os.Exit(EX_USAGE)
+					}
+					os.Exit(commands.RunCommand(c,
+						commands.WithLoginRetry(
+							commands.GetTags), cCtx.Args().First()))
+					return nil
+				},
+			},
+			{
+				Name:      "maddproject",
+				Usage:     "add a project to a member",
+				UsageText: "maddproject [commands options] <username> <proj_name> [<file>]",
+				Action: func(cCtx *cli.Context) error {
+					if cCtx.Args().Len() < 2 {
+						fmt.Fprintf(os.Stderr, "Missing arguments\n")
+						os.Exit(EX_USAGE)
+					}
+					os.Exit(commands.RunCommand(c,
+						commands.WithLoginRetry(
+							commands.DefaultLastArgumentToStdin(
+								commands.AddProject)), cCtx.Args().Slice()...))
+					return nil
+				},
+			},
+			{
+				Name:      "maddlogo",
+				Usage:     "upload member logo",
+				UsageText: "mupdatelogo [command options] <username> [<logo>]",
+				Action: func(cCtx *cli.Context) error {
+					if cCtx.Args().Len() < 1 {
+						fmt.Fprintf(os.Stderr, "Missing <username> arguments\n")
+						os.Exit(EX_USAGE)
+					}
+					os.Exit(commands.RunCommand(c,
+						commands.WithLoginRetry(
+							commands.DefaultLastArgumentToStdin(
+								commands.UpdateMemberLogo)), cCtx.Args().Slice()...))
+					return nil
+				},
+			},
+			{
+				Name:      "maddtag",
+				Usage:     "add member tag",
+				UsageText: "maddtag [command options] <username> [<file>]",
+				Action: func(cCtx *cli.Context) error {
+					if cCtx.Args().Len() < 1 {
+						fmt.Fprintf(os.Stderr, "Missing <username> arguments\n")
+						os.Exit(EX_USAGE)
+					}
+					os.Exit(commands.RunCommand(c,
+						commands.WithLoginRetry(
+							commands.DefaultLastArgumentToStdin(
+								commands.AddTag)), cCtx.Args().Slice()...))
+					return nil
+				},
+			},
+			{
+				Name:      "mdeltag",
+				Usage:     "delete member tag",
+				UsageText: "mdeltag [command options] <username> [<file>]",
+				Action: func(cCtx *cli.Context) error {
+					if cCtx.Args().Len() < 1 {
+						fmt.Fprintf(os.Stderr, "Missing <username> arguments\n")
+						os.Exit(EX_USAGE)
+					}
+					os.Exit(commands.RunCommand(c,
+						commands.WithLoginRetry(
+							commands.DefaultLastArgumentToStdin(
+								commands.DeleteTag)), cCtx.Args().Slice()...))
 					return nil
 				},
 			},
@@ -175,10 +269,10 @@ func main() {
 			{
 				Name:      "pget",
 				Usage:     "retrieve information of a project",
-				UsageText: "pget [command options] <id>",
+				UsageText: "pget [command options] <proj_name>",
 				Action: func(cCtx *cli.Context) error {
-					if cCtx.Args().Len() == 0 {
-						fmt.Fprintf(os.Stderr, "Missing <id> argument\n")
+					if cCtx.Args().Len() < 1 {
+						fmt.Fprintf(os.Stderr, "Missing <proj_name> argument\n")
 						os.Exit(EX_USAGE)
 					}
 					os.Exit(commands.RunCommand(c,
@@ -190,40 +284,38 @@ func main() {
 			{
 				Name:      "pcreate",
 				Usage:     "create a new project",
-				UsageText: "pcreate [command options] <file>",
+				UsageText: "pcreate [command options] [<file>]",
 				Action: func(cCtx *cli.Context) error {
-					if cCtx.Args().Len() == 0 {
-						fmt.Fprintf(os.Stderr, "Missing <file> argument\n")
-						os.Exit(EX_USAGE)
-					}
 					os.Exit(commands.RunCommand(c,
 						commands.WithLoginRetry(
-							commands.CreateProject), cCtx.Args().Get(0), cCtx.Args().Get(1)))
+							commands.DefaultLastArgumentToStdin(
+								commands.CreateProject)), cCtx.Args().Slice()...))
 					return nil
 				},
 			},
 			{
 				Name:      "pupdate",
 				Usage:     "update information of a project",
-				UsageText: "pupdate [command options] <id> <file>",
+				UsageText: "pupdate [command options] <proj_name> [<file>]",
 				Action: func(cCtx *cli.Context) error {
-					if cCtx.Args().Len() != 2 {
+					if cCtx.Args().Len() < 1 {
 						fmt.Fprintf(os.Stderr, "Missing arguments\n")
 						os.Exit(EX_USAGE)
 					}
 					os.Exit(commands.RunCommand(c,
 						commands.WithLoginRetry(
-							commands.UpdateProject), cCtx.Args().Get(0), cCtx.Args().Get(1)))
+							commands.DefaultLastArgumentToStdin(
+								commands.UpdateProject)), cCtx.Args().Slice()...))
 					return nil
 				},
 			},
 			{
 				Name:      "pdelete",
 				Usage:     "delete project from the database",
-				UsageText: "pdelete [command options] <id> ",
+				UsageText: "pdelete [command options] <proj_name> ",
 				Action: func(cCtx *cli.Context) error {
-					if cCtx.Args().Len() == 0 {
-						fmt.Fprintf(os.Stderr, "Missing <username> argument\n")
+					if cCtx.Args().Len() < 1 {
+						fmt.Fprintf(os.Stderr, "Missing <proj_name> argument\n")
 						os.Exit(EX_USAGE)
 					}
 					os.Exit(commands.RunCommand(c,
@@ -235,10 +327,40 @@ func main() {
 			{
 				Name:      "pmembers",
 				Usage:     "get members in a project",
-				UsageText: "pmembers [command optinos] <id>",
+				UsageText: "pmembers [command options] <proj_name>",
 				Action: func(cCtx *cli.Context) error {
-					if cCtx.Args().Len() == 0 {
-						fmt.Fprintf(os.Stderr, "Missing <id> argument\n")
+					if cCtx.Args().Len() < 1 {
+						fmt.Fprintf(os.Stderr, "Missing <proj_name> argument\n")
+						os.Exit(EX_USAGE)
+					}
+					os.Exit(commands.RunCommand(c,
+						commands.WithLoginRetry(
+							commands.GetProjectMembers), cCtx.Args().First()))
+					return nil
+				},
+			},
+			{
+				Name:      "plogo",
+				Usage:     "get project logo",
+				UsageText: "pmembers [command options] <proj_name>",
+				Action: func(cCtx *cli.Context) error {
+					if cCtx.Args().Len() < 1 {
+						fmt.Fprintf(os.Stderr, "Missing <proj_name> argument\n")
+						os.Exit(EX_USAGE)
+					}
+					os.Exit(commands.RunCommand(c,
+						commands.WithLoginRetry(
+							commands.GetProjectLogo), cCtx.Args().First()))
+					return nil
+				},
+			},
+			{
+				Name:      "paddmember",
+				Usage:     "add member to a project",
+				UsageText: "pmembers [command options] <proj_name> <username>",
+				Action: func(cCtx *cli.Context) error {
+					if cCtx.Args().Len() < 2 {
+						fmt.Fprintf(os.Stderr, "Missing argument\n")
 						os.Exit(EX_USAGE)
 					}
 					os.Exit(commands.RunCommand(c,
@@ -255,17 +377,30 @@ func main() {
 					// instead of writting a new command (which would just result in code duplication)
 					// we simply pass it a fake command which returns Unauthorized at first and forces the
 					// decorator to attempt a login, if it can do it, then we just return successful
-					var retried bool = false
-					os.Exit(commands.RunCommand(c, commands.WithLoginRetry(
+					os.Exit(commands.RunCommand(c, commands.Login))
+					return nil
+				},
+			},
+			{
+				Name:  "logout",
+				Usage: "logoout off the API, clearing the session",
+				Action: func(cCtx *cli.Context) error {
+					os.Exit(commands.RunCommand(c,
 						func(c *client.Client, args ...string) ([]byte, error) {
-							if !retried {
-								retried = true
-								return nil, client.ErrUnauthorized
-							} else {
-								return []byte("Logged in successfully!\n"), nil
+							rsp, err := c.Http.Get(c.Cfg.Root + "/logout")
+							if err != nil {
+								return nil, commands.NewCommandError("Failed requesting server", fmt.Errorf("http.Get %s: %w", c.Cfg.Root+"/logout", err))
 							}
-						},
-					)))
+							defer rsp.Body.Close()
+							rspData, err := io.ReadAll(rsp.Body)
+							if err != nil {
+								return nil, commands.NewCommandError("Failed receiving server response", fmt.Errorf("io.ReadAll: %w", err))
+							}
+							if rsp.StatusCode != http.StatusOK {
+								return nil, commands.NewCommandError(fmt.Sprintf("%d %s\n%s", rsp.StatusCode, http.StatusText(rsp.StatusCode), string(rspData)), nil)
+							}
+							return rspData, nil
+						}))
 					return nil
 				},
 			},

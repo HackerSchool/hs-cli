@@ -33,18 +33,42 @@ func (e CommandError) Error() string {
 
 func WithLoginRetry(cmd Command) Command {
 	return func(c *client.Client, args ...string) ([]byte, error) {
-		r, err := cmd(c, args...)
-		if errors.Is(err, client.ErrUnauthorized) {
-			logging.LogDebug("Retrying command with login")
-			if err := c.Login(); err != nil {
-				if errors.Is(err, client.ErrUnauthorized) {
-					return nil, NewCommandError("Unauthorized!", nil)
+		rsp, err := cmd(c, args...) // run command
+		if err != nil {             // command fails, see if unauthorized error
+			var cmdErr CommandError
+			if errors.As(err, &cmdErr) {
+				if errors.Is(cmdErr.Cause, client.ErrUnauthorized) {
+					_, err := Login(c) // attempt to login
+					if err != nil {    // login fails
+						return nil, err
+					}
+					return cmd(c, args...)
 				}
-				return nil, NewCommandError("Failed to log in", err)
+			} else {
+				// shouldn't happen, all commands should return CommandError
+				return nil, err
 			}
+		}
+		return rsp, err
+	}
+}
+
+func DefaultLastArgumentToStdin(cmd Command) Command {
+	return func(c *client.Client, args ...string) ([]byte, error) {
+		if len(args) == 0 {
+			args = append(args, "/dev/stdin")
 			return cmd(c, args...)
 		}
-		return r, err
+
+		// if last argument is not an existing file default to stdin
+		lastArg := args[len(args)-1]
+		if _, err := os.Stat(lastArg); os.IsNotExist(err) {
+			args = args[:len(args)-1]
+			args = append(args, "/dev/stdin")
+			return cmd(c, args...)
+		}
+
+		return cmd(c, args...)
 	}
 }
 
@@ -53,19 +77,18 @@ func WithLoginRetry(cmd Command) Command {
 func RunCommand(c *client.Client, cmd Command, args ...string) int {
 	r, err := cmd(c, args...)
 	if err != nil {
-		var retCode int = 2
-
 		var commandErr CommandError
 		if errors.As(err, &commandErr) {
-			if commandErr.Cause == nil { // business logic error
-				retCode = 1
+			if commandErr.Cause == nil || errors.Is(commandErr.Cause, client.ErrUnauthorized) { // business logic error
+				fmt.Fprintf(os.Stdout, "%s\n", err)
+				return 1
 			} else {
 				logging.LogDebug(commandErr.Cause.Error())
 			}
 		}
 
 		fmt.Fprintf(os.Stderr, "%s\n", err)
-		return retCode
+		return 2
 	}
 	fmt.Fprintf(os.Stdout, "%s\n", string(r))
 	return 0
